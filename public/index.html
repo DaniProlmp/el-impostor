@@ -438,26 +438,15 @@
       .card { padding: 24px 18px; }
     }
 
-    /* ── Credits ── */
-    .credits {
-      position: fixed;
-      bottom: 12px;
-      right: 16px;
-      font-size: 0.65rem;
-      color: var(--muted);
-      opacity: 0.5;
-      letter-spacing: 0.05em;
-      z-index: 10;
-      pointer-events: none;
-      font-family: 'DM Sans', sans-serif;
-    }
+
   </style>
 </head>
 <body>
+<div id="toast"></div><div id="app">
+  
 <div id="toast"></div>
 <div class="credits">By DaniProlmp</div>
 <div id="app">
-
   <!-- ══ HOME ══════════════════════════════════════════════════════════════ -->
   <div class="screen active" id="screen-home">
     <div class="card">
@@ -623,7 +612,14 @@ function initSocket() {
   socket = io();
   state.myId = socket.id;
 
-  socket.on("connect", () => { state.myId = socket.id; });
+  socket.on("connect", () => {
+    state.myId = socket.id;
+    if (state.code && state.myName) {
+      socket.emit("room:join", { code: state.code, name: state.myName });
+    }
+  });
+
+  socket.on("disconnect", () => toast("Conexión perdida, reconectando…", true));
 
   socket.on("room:joined", ({ code }) => {
     state.code = code;
@@ -636,6 +632,7 @@ function initSocket() {
   });
 
   socket.on("error", (msg) => toast(msg, true));
+  socket.on("notice", (msg) => toast(msg));
 }
 
 // ─── Actions ──────────────────────────────────────────────────────────────────
