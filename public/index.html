@@ -443,10 +443,7 @@
 </head>
 <body>
 <div id="toast"></div><div id="app">
-  
-<div id="toast"></div>
-<div class="credits">By DaniProlmp</div>
-<div id="app">
+
   <!-- ══ HOME ══════════════════════════════════════════════════════════════ -->
   <div class="screen active" id="screen-home">
     <div class="card">
@@ -669,9 +666,6 @@ function doReveal() {
 
 function doReady() {
   if (state.readySent) return;
-  // Check server state too: if already in readyPlayers, don't send again
-  const room = state.room;
-  if (room && room.readyPlayers && room.readyPlayers.includes(socket?.id)) return;
   state.readySent = true;
   const btn = document.getElementById("reveal-btn");
   if (btn) { btn.disabled = true; btn.textContent = "Esperando a los demás…"; }
@@ -724,13 +718,13 @@ function renderLobby(room) {
   list.innerHTML = room.players.map(p => `
     <div class="player-row">
       <div class="player-dot ${p.connected ? 'online' : 'offline'}"></div>
-      <div class="player-name">${esc(p.name)}${p.id === socket?.id ? ' <span class="pill pill-muted">Tú</span>' : ''}</div>
+      <div class="player-name">${esc(p.name)}${p.id === state.myId ? ' <span class="pill pill-muted">Tú</span>' : ''}</div>
       ${p.id === room.host ? '<span class="pill pill-accent">HOST</span>' : ''}
       <div class="player-score">${p.score} pts</div>
     </div>
   `).join("");
 
-  const isHost = room.host === socket?.id;
+  const isHost = room.host === state.myId;
   const action = document.getElementById("lobby-action");
   if (isHost) {
     action.innerHTML = connected.length < 3
@@ -748,13 +742,9 @@ function renderReveal(room) {
   const total = room.players.filter(p => p.connected).length;
   document.getElementById("reveal-ready-count").textContent = `${readyCount}/${total} listos`;
 
-  // Sync local readySent with server truth
-  const iAmReady = room.readyPlayers && room.readyPlayers.includes(socket?.id);
-  if (!iAmReady) state.readySent = false; // server doesn't have me as ready → reset
-
   if (!state.revealDone) return;
 
-  const isImpostor = socket?.id === room.impostorId;
+  const isImpostor = state.myId === room.impostorId;
   const box = document.getElementById("reveal-word-box");
   box.className = "word-box " + (isImpostor ? "impostor" : "civilian");
   document.getElementById("reveal-role-label").textContent = isImpostor ? "⚠ Eres el Impostor" : "Tu palabra";
@@ -769,10 +759,10 @@ function renderReveal(room) {
     ? `${total - readyCount} jugador(es) aún no están listos`
     : "¡Todos listos!";
 
-  // Sync button state with server
+  // Button: disable if already sent ready
   const btn = document.getElementById("reveal-btn");
   if (btn) {
-    if (iAmReady) {
+    if (state.readySent) {
       btn.disabled = true;
       btn.textContent = "Esperando a los demás…";
     } else {
@@ -793,8 +783,8 @@ function renderGame(room) {
   document.getElementById("game-my-word").textContent = state.myWord || "—";
 
   const currentP = room.players[room.currentPlayerIdx];
-  const isMyTurn = currentP?.id === socket?.id;
-  const alreadyHinted = room.hints.some(h => h.playerId === socket?.id);
+  const isMyTurn = currentP?.id === state.myId;
+  const alreadyHinted = room.hints.some(h => h.playerId === state.myId);
 
   const banner = document.getElementById("game-turn-banner");
   banner.className = "turn-banner" + (isMyTurn && !alreadyHinted ? " my-turn" : "");
@@ -805,7 +795,7 @@ function renderGame(room) {
   hintsEl.innerHTML = room.hints.length === 0
     ? `<div style="color:var(--muted);font-size:0.85rem;padding:8px 0">Aún no hay pistas…</div>`
     : room.hints.map(h => `
-      <div class="hint-card ${h.playerId === socket?.id ? 'my-hint' : ''}">
+      <div class="hint-card ${h.playerId === state.myId ? 'my-hint' : ''}">
         <div class="hint-player">${esc(h.playerName)}</div>
         <div class="hint-text">${esc(h.text)}</div>
       </div>
@@ -859,14 +849,14 @@ function updateTimer(total) {
 function renderVote(room) {
   // Hints recap
   document.getElementById("vote-hints").innerHTML = room.hints.map(h => `
-    <div class="hint-card ${h.playerId === socket?.id ? 'my-hint' : ''}">
+    <div class="hint-card ${h.playerId === state.myId ? 'my-hint' : ''}">
       <div class="hint-player">${esc(h.playerName)}</div>
       <div class="hint-text">${esc(h.text)}</div>
     </div>
   `).join("");
 
   // Vote buttons
-  const others = room.players.filter(p => p.id !== socket?.id && p.connected);
+  const others = room.players.filter(p => p.id !== state.myId && p.connected);
   const voteEl = document.getElementById("vote-buttons");
   if (!state.myVote) {
     voteEl.innerHTML = others.map(p => `
@@ -908,12 +898,12 @@ function renderResults(room) {
   document.getElementById("result-scores").innerHTML = sorted.map((p, i) => `
     <div class="score-row">
       <span class="score-rank">${i === 0 ? '' : '#' + (i + 1)}</span>
-      <span class="score-name">${esc(p.name)}${p.id === room.impostorId ? ' <span class="pill pill-danger">Impostor</span>' : ''}${p.id === socket?.id ? ' <span class="pill pill-muted">Tú</span>' : ''}</span>
+      <span class="score-name">${esc(p.name)}${p.id === room.impostorId ? ' <span class="pill pill-danger">Impostor</span>' : ''}${p.id === state.myId ? ' <span class="pill pill-muted">Tú</span>' : ''}</span>
       <span class="score-pts">${p.score} pts</span>
     </div>
   `).join("");
 
-  const isHost = room.host === socket?.id;
+  const isHost = room.host === state.myId;
   const moreRounds = room.round < room.maxRounds;
   document.getElementById("result-action").innerHTML = isHost
     ? moreRounds
@@ -949,5 +939,8 @@ function esc(s) {
 document.getElementById("home-name").addEventListener("keydown", e => { if (e.key === "Enter") doCreate(); });
 document.getElementById("home-code").addEventListener("keydown", e => { if (e.key === "Enter") doJoin(); });
 </script>
+  <div id="toast"></div>
+<div class="credits">By DaniProlmp</div>
+<div id="app">
 </body>
 </html>
