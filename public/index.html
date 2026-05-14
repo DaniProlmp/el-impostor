@@ -437,10 +437,25 @@
     @media (max-width: 480px) {
       .card { padding: 24px 18px; }
     }
+
+    /* ── Credits ── */
+    .credits {
+      position: fixed;
+      bottom: 12px;
+      right: 16px;
+      font-size: 0.65rem;
+      color: var(--muted);
+      opacity: 0.5;
+      letter-spacing: 0.05em;
+      z-index: 10;
+      pointer-events: none;
+      font-family: 'DM Sans', sans-serif;
+    }
   </style>
 </head>
 <body>
 <div id="toast"></div>
+<div class="credits">By DaniProlmp</div>
 <div id="app">
 
   <!-- ══ HOME ══════════════════════════════════════════════════════════════ -->
@@ -657,9 +672,12 @@ function doReveal() {
 
 function doReady() {
   if (state.readySent) return;
+  // Check server state too: if already in readyPlayers, don't send again
+  const room = state.room;
+  if (room && room.readyPlayers && room.readyPlayers.includes(socket?.id)) return;
   state.readySent = true;
-  document.getElementById("reveal-btn").disabled = true;
-  document.getElementById("reveal-btn").textContent = "Esperando a los demás…";
+  const btn = document.getElementById("reveal-btn");
+  if (btn) { btn.disabled = true; btn.textContent = "Esperando a los demás…"; }
   socket.emit("game:ready");
 }
 
@@ -733,6 +751,10 @@ function renderReveal(room) {
   const total = room.players.filter(p => p.connected).length;
   document.getElementById("reveal-ready-count").textContent = `${readyCount}/${total} listos`;
 
+  // Sync local readySent with server truth
+  const iAmReady = room.readyPlayers && room.readyPlayers.includes(socket?.id);
+  if (!iAmReady) state.readySent = false; // server doesn't have me as ready → reset
+
   if (!state.revealDone) return;
 
   const isImpostor = socket?.id === room.impostorId;
@@ -749,6 +771,18 @@ function renderReveal(room) {
   document.getElementById("reveal-ready-text").textContent = readyCount < total
     ? `${total - readyCount} jugador(es) aún no están listos`
     : "¡Todos listos!";
+
+  // Sync button state with server
+  const btn = document.getElementById("reveal-btn");
+  if (btn) {
+    if (iAmReady) {
+      btn.disabled = true;
+      btn.textContent = "Esperando a los demás…";
+    } else {
+      btn.disabled = false;
+      btn.textContent = "Listo →";
+    }
+  }
 }
 
 let timerInterval = null;
@@ -918,5 +952,6 @@ function esc(s) {
 document.getElementById("home-name").addEventListener("keydown", e => { if (e.key === "Enter") doCreate(); });
 document.getElementById("home-code").addEventListener("keydown", e => { if (e.key === "Enter") doJoin(); });
 </script>
+<footer>By DaniProlmp</footer>
 </body>
 </html>
