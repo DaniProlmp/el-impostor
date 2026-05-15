@@ -48,9 +48,10 @@ function getRoom(code) { return rooms[code] || null; }
 function emitRoom(code) {
   const room = rooms[code];
   if (!room) return;
+  const readyCount = room.readyPlayers ? room.readyPlayers.length : 0;
   room.players.forEach(p => {
     const word = room.wordPair ? (p.id === room.impostorId ? room.wordPair[1] : room.wordPair[0]) : null;
-    io.to(p.id).emit("room:update", { ...room, myWord: word });
+    io.to(p.id).emit("room:update", { ...room, myWord: word, readyPlayers: { length: readyCount } });
   });
 }
 
