@@ -124,14 +124,21 @@ io.on("connection", (socket) => {
     if (room.players.length >= 10) return socket.emit("error", "Sala llena");
     if (!name?.trim()) return socket.emit("error", "Nombre requerido");
     const existing = room.players.find(p => p.name === name.trim());
-    if (existing) { existing.id = socket.id; existing.connected = true; }
-    else room.players.push({ id: socket.id, name: name.trim(), score: 0, connected: true });
+    if (existing) {
+      if (room.readyPlayers) {
+        const idx = room.readyPlayers.indexOf(existing.id);
+        if (idx !== -1) room.readyPlayers[idx] = socket.id;
+      }
+      existing.id = socket.id;
+      existing.connected = true;
+    } else {
+      room.players.push({ id: socket.id, name: name.trim(), score: 0, connected: true });
+    }
     currentRoom = room.code;
     socket.join(room.code);
     emitRoom(room.code);
     socket.emit("room:joined", { code: room.code });
   });
-
   socket.on("game:start", () => {
     if (!currentRoom) return;
     const room = getRoom(currentRoom);
