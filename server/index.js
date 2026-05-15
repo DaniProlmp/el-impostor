@@ -154,11 +154,19 @@ socket.on("game:ready", () => {
     const room = getRoom(currentRoom);
     if (!room) return;
     if (!room.readyPlayers) room.readyPlayers = [];
-    if (!room.readyPlayers.includes(socket.id)) room.readyPlayers.push(socket.id);
+    const player = room.players.find(p => p.id === socket.id);
+    if (!player) return;
+    if (!room.readyPlayers.includes(player.name)) {
+      room.readyPlayers.push(player.name);
+    }
     const alive = room.players.filter(p => p.connected);
     if (room.readyPlayers.length >= alive.length) {
-      room.phase = "game"; room.readyPlayers = []; advanceTurn(currentRoom);
-    } else { emitRoom(currentRoom); }
+      room.phase = "game";
+      room.readyPlayers = [];
+      advanceTurn(currentRoom);
+    } else {
+      emitRoom(currentRoom);
+    }
   });
 
   socket.on("game:hint", ({ text }) => {
