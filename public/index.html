@@ -612,7 +612,7 @@ function initSocket() {
   socket.on("connect", () => {
     state.myId = socket.id;
     if (state.code && state.myName) {
-      socket.emit("room:join", { code: state.code, name: state.myName });
+      socket.emit("rejoin", { code: state.code, name: state.myName });
     }
   });
 
