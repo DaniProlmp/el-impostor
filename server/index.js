@@ -140,15 +140,15 @@ io.on("connection", (socket) => {
     startRound(currentRoom);
   });
 
-  socket.on("game:ready", () => {
+socket.on("game:ready", () => {
     if (!currentRoom) return;
     const room = getRoom(currentRoom);
     if (!room) return;
-    if (!room.readyPlayers) room.readyPlayers = new Set();
-    room.readyPlayers.add(socket.id);
+    if (!room.readyPlayers) room.readyPlayers = [];
+    if (!room.readyPlayers.includes(socket.id)) room.readyPlayers.push(socket.id);
     const alive = room.players.filter(p => p.connected);
-    if (room.readyPlayers.size >= alive.length) {
-      room.phase = "game"; room.readyPlayers = new Set(); advanceTurn(currentRoom);
+    if (room.readyPlayers.length >= alive.length) {
+      room.phase = "game"; room.readyPlayers = []; advanceTurn(currentRoom);
     } else { emitRoom(currentRoom); }
   });
 
