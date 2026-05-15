@@ -117,13 +117,13 @@ io.on("connection", (socket) => {
     socket.emit("room:joined", { code: room.code });
   });
 
-  socket.on("room:join", ({ code, name }) => {
+ socket.on("room:join", ({ code, name }) => {
     const room = getRoom(code?.toUpperCase());
     if (!room) return socket.emit("error", "Sala no encontrada");
-    if (room.phase !== "lobby") return socket.emit("error", "La partida ya comenzó");
-    if (room.players.length >= 10) return socket.emit("error", "Sala llena");
     if (!name?.trim()) return socket.emit("error", "Nombre requerido");
     const existing = room.players.find(p => p.name === name.trim());
+    if (room.phase !== "lobby" && !existing) return socket.emit("error", "La partida ya comenzó");
+    if (!existing && room.players.length >= 10) return socket.emit("error", "Sala llena");
     if (existing) {
       if (room.readyPlayers) {
         const idx = room.readyPlayers.indexOf(existing.id);
@@ -139,6 +139,7 @@ io.on("connection", (socket) => {
     emitRoom(room.code);
     socket.emit("room:joined", { code: room.code });
   });
+  
   socket.on("game:start", () => {
     if (!currentRoom) return;
     const room = getRoom(currentRoom);
