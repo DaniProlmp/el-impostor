@@ -183,6 +183,23 @@ socket.on("game:ready", () => {
     else emitRoom(currentRoom);
   });
 
+socket.on("rejoin", ({ code, name }) => {
+    const room = getRoom(code?.toUpperCase());
+    if (!room) return;
+    const existing = room.players.find(p => p.name === name.trim());
+    if (!existing) return;
+    if (room.readyPlayers) {
+      const idx = room.readyPlayers.indexOf(existing.id);
+      if (idx !== -1) room.readyPlayers[idx] = socket.id;
+    }
+    existing.id = socket.id;
+    existing.connected = true;
+    currentRoom = room.code;
+    socket.join(room.code);
+    emitRoom(room.code);
+    socket.emit("room:joined", { code: room.code });
+  });
+  
   socket.on("game:nextRound", () => {
     if (!currentRoom) return;
     const room = getRoom(currentRoom);
