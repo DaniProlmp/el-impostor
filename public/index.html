@@ -616,7 +616,7 @@ function initSocket() {
     }
   });
 
-  socket.on("disconnect", () => toast("Conexión perdida, reconectando…", true));
+socket.on("disconnect", () => {});
 
   socket.on("room:joined", ({ code }) => {
     state.code = code;
